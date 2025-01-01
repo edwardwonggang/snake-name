@@ -486,13 +486,93 @@ document.getElementById('pauseBtn').addEventListener('touchstart', (e) => {
     e.preventDefault();
 }, { passive: false });
 
-// 调整画布大小
-function resizeCanvas() {
-    const size = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.7);
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
+// 阻止 iOS 的默认行为
+document.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+}, { passive: false });
+
+// 阻止双击缩放
+document.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+});
+
+// 修改按钮事件处理
+function initControls() {
+    const buttons = {
+        upBtn: { dx: 0, dy: -1 },
+        downBtn: { dx: 0, dy: 1 },
+        leftBtn: { dx: -1, dy: 0 },
+        rightBtn: { dx: 1, dy: 0 }
+    };
+
+    Object.entries(buttons).forEach(([id, { dx: newDx, dy: newDy }]) => {
+        const button = document.getElementById(id);
+        ['touchstart', 'mousedown'].forEach(eventType => {
+            button.addEventListener(eventType, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // 检查是否可以移动到新方向
+                if ((newDx === 0 && dx === 0) || (newDy === 0 && dy === 0)) {
+                    if ((newDx !== -dx) && (newDy !== -dy)) {
+                        dx = newDx;
+                        dy = newDy;
+                        if (!gameStarted) {
+                            gameStarted = true;
+                        }
+                    }
+                }
+            });
+        });
+    });
+
+    // 暂停按钮
+    const pauseBtn = document.getElementById('pauseBtn');
+    ['touchstart', 'mousedown'].forEach(eventType => {
+        pauseBtn.addEventListener(eventType, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            gameStarted = !gameStarted;
+            pauseBtn.textContent = gameStarted ? '⏸' : '▶';
+        });
+    });
+
+    // 静音按钮
+    const muteBtn = document.getElementById('muteBtn');
+    ['touchstart', 'mousedown'].forEach(eventType => {
+        muteBtn.addEventListener(eventType, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (currentMusic) {
+                currentMusic.muted = !currentMusic.muted;
+                muteBtn.textContent = currentMusic.muted ? '🔇' : '🔊';
+                if (nextMusic) nextMusic.muted = currentMusic.muted;
+            }
+        });
+    });
 }
 
-// 添加窗口大小改变事件
+// 调整画布大小
+function resizeCanvas() {
+    const container = document.querySelector('.game-container');
+    const maxWidth = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.6);
+    const scale = window.devicePixelRatio || 1;
+    
+    canvas.style.width = `${maxWidth}px`;
+    canvas.style.height = `${maxWidth}px`;
+    canvas.width = maxWidth * scale;
+    canvas.height = maxWidth * scale;
+    
+    ctx.scale(scale, scale);
+}
+
+// 页面加载和方向变化时调整大小
+window.addEventListener('load', () => {
+    resizeCanvas();
+    initControls();
+    initMusicSystem();
+    gameLoop();
+});
+
 window.addEventListener('resize', resizeCanvas);
-window.addEventListener('load', resizeCanvas);
+window.addEventListener('orientationchange', resizeCanvas);
