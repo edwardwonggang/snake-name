@@ -512,6 +512,41 @@ function initControls() {
             }
         });
     });
+
+    const musicBtn = document.getElementById('musicBtn');
+    if (musicBtn) {
+        musicBtn.addEventListener('click', function() {
+            console.log("音乐按钮被点击");  // 添加调试日志
+            
+            if (currentMusic) {
+                if (currentMusic.paused) {
+                    console.log("尝试播放音乐");
+                    const playPromise = currentMusic.play();
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                console.log("音乐播放成功");
+                                musicBtn.classList.remove('muted');
+                                startMusicRotation();
+                            })
+                            .catch(error => {
+                                console.error("音乐播放失败:", error);
+                                musicBtn.classList.add('muted');
+                            });
+                    }
+                } else {
+                    console.log("暂停音乐");
+                    currentMusic.pause();
+                    nextMusic.pause();
+                    musicBtn.classList.add('muted');
+                }
+            } else {
+                console.log("音频对象未初始化");
+            }
+        });
+    } else {
+        console.error("未找到音乐按钮元素");
+    }
 }
 
 // 修改画布大小调整函数
