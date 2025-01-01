@@ -47,122 +47,85 @@ let touchStartX = 0;
 let touchStartY = 0;
 const minSwipeDistance = 30;
 
+// 添加游戏状态变量
+let isPaused = false;
+
 // 游戏主循环
 function gameLoop() {
     clearInterval(gameInterval);
-    gameInterval = setInterval(function() {
-        if (!gameStarted) {
-            draw();
-            return;
-        }
-        if (update()) {
-            draw();
+    gameInterval = setInterval(() => {
+        if (!isPaused) {
+            if (update()) {
+                draw();
+            }
         }
     }, 1000/speed);
 }
 
 // 更新游戏状态
 function update() {
-    const newHead = {x: snake[0].x + dx, y: snake[0].y + dy};
+    if (!gameStarted || isPaused) return false;
+
+    // 计算新的头部位置
+    const head = { x: snake[0].x + dx, y: snake[0].y + dy };
     
-    // 穿墙处理
-    if (newHead.x < 0) newHead.x = tileCount - 1;
-    if (newHead.x >= tileCount) newHead.x = 0;
-    if (newHead.y < 0) newHead.y = tileCount - 1;
-    if (newHead.y >= tileCount) newHead.y = 0;
+    // 边界检查
+    if (head.x < 0) head.x = tileCount - 1;
+    if (head.x >= tileCount) head.x = 0;
+    if (head.y < 0) head.y = tileCount - 1;
+    if (head.y >= tileCount) head.y = 0;
     
     // 检查是否撞到自己
     for (let i = 0; i < snake.length; i++) {
-        if (newHead.x === snake[i].x && newHead.y === snake[i].y) {
+        if (snake[i].x === head.x && snake[i].y === head.y) {
             gameOver();
             return false;
         }
     }
     
-    snake.unshift(newHead);
+    // 移动蛇
+    snake.unshift(head);
     
     // 检查是否吃到食物
-    if (newHead.x === food.x && newHead.y === food.y) {
+    if (head.x === food.x && head.y === food.y) {
         score += 10;
-        speed = Math.min(12, 5 + Math.floor(score / 100));
-        scoreElement.textContent = `分数: ${score}`;
+        document.getElementById('score').textContent = `分数: ${score}`;
         generateFood();
-        playEatSound();
+        speed = Math.min(speed + 0.5, 15); // 增加速度，但限制最大速度
     } else {
         snake.pop();
     }
     
-    rainbow = (rainbow + 1) % 360;
     return true;
 }
 
 // 绘制游戏画面
 function draw() {
-    // 创建清新的渐变背景
-    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-    gradient.addColorStop(0, '#E8F5E9');
-    gradient.addColorStop(1, '#C8E6C9');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // 清除画布
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // 绘制网格
-    ctx.strokeStyle = 'rgba(76, 175, 80, 0.3)';
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < tileCount; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * gridSize, 0);
-        ctx.lineTo(i * gridSize, canvas.height);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i * gridSize);
-        ctx.lineTo(canvas.width, i * gridSize);
-        ctx.stroke();
-    }
+    // 计算格子大小
+    const gridSize = Math.floor(canvas.width / tileCount);
     
     // 绘制蛇
-    snake.forEach((segment, index) => {
-        const hue = (rainbow + index * 15) % 360;
-        ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
-        ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        ctx.shadowBlur = 15;
-        ctx.beginPath();
-        ctx.roundRect(
+    ctx.fillStyle = 'green';
+    snake.forEach(segment => {
+        ctx.fillRect(
             segment.x * gridSize + 1,
             segment.y * gridSize + 1,
             gridSize - 2,
-            gridSize - 2,
-            5
+            gridSize - 2
         );
-        ctx.fill();
     });
     
     // 绘制食物
-    ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
-    ctx.shadowBlur = 20;
-    ctx.fillStyle = '#FF1744';
-    ctx.beginPath();
-    ctx.arc(
-        food.x * gridSize + gridSize/2,
-        food.y * gridSize + gridSize/2,
-        gridSize/3,
-        0,
-        Math.PI * 2
+    ctx.fillStyle = 'red';
+    ctx.fillRect(
+        food.x * gridSize + 1,
+        food.y * gridSize + 1,
+        gridSize - 2,
+        gridSize - 2
     );
-    ctx.fill();
-    
-    // 重置阴影效果
-    ctx.shadowBlur = 0;
-    
-    // 如果游戏还没开始，显示提示信息
-    if (!gameStarted) {
-        ctx.fillStyle = '#2E7D32';
-        ctx.font = 'bold 24px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('按方向键开始游戏', canvas.width/2, canvas.height/2);
-        ctx.font = '16px Arial';
-        ctx.fillText('使用方向键控制蛇的移动', canvas.width/2, canvas.height/2 + 30);
-        ctx.fillText('可以穿墙，撞到自己游戏结束', canvas.width/2, canvas.height/2 + 50);
-    }
 }
 
 // 生成食物
@@ -179,18 +142,18 @@ function generateFood() {
 
 // 游戏结束
 function gameOver() {
-    pauseBackgroundMusic();
+    gameStarted = false;
+    isPaused = false;
     alert(`游戏结束！得分：${score}`);
-    snake = [{x: 10, y: 10}];
+    // 重置游戏
+    snake = [{ x: 10, y: 10 }];
+    food = { x: 15, y: 15 };
     dx = 0;
     dy = 0;
     score = 0;
-    speed = 5;
-    gameStarted = false;
-    scoreElement.textContent = `分数: ${score}`;
-    generateFood();
-    resumeBackgroundMusic();
-    gameLoop();
+    speed = 7;
+    document.getElementById('score').textContent = `分数: ${score}`;
+    document.getElementById('pauseBtn').textContent = '⏸';
 }
 
 // 预加载音乐
@@ -215,23 +178,30 @@ function preloadMusic(url) {
 // 初始化音乐系统
 async function initMusicSystem() {
     try {
-        console.log("开始初始化音乐系统...");
-        currentMusic = await preloadMusic(musicList[0].url);
-        console.log("第一首音乐加载完成");
-        nextMusic = await preloadMusic(musicList[1].url);
-        console.log("第二首音乐加载完成");
+        console.log("初始化音乐系统...");
+        // 预加载音乐
+        currentMusic = new Audio(musicList[0].url);
+        nextMusic = new Audio(musicList[1].url);
         
-        // 添加音乐加载完成的提示
-        document.body.addEventListener('click', () => {
-            if (currentMusic && currentMusic.paused) {
-                startBackgroundMusic();
-            }
-        });
-
-        startBackgroundMusic();
-        startMusicRotation();
+        // 设置音量
+        currentMusic.volume = 0.3;
+        nextMusic.volume = 0.3;
+        
+        // 添加错误处理
+        currentMusic.onerror = (e) => console.error("音乐加载错误:", e);
+        nextMusic.onerror = (e) => console.error("音乐加载错误:", e);
+        
+        // 自动播放处理
+        document.addEventListener('touchstart', function initAudio() {
+            console.log("尝试播放音乐...");
+            currentMusic.play()
+                .then(() => console.log("音乐开始播放"))
+                .catch(e => console.error("播放失败:", e));
+            document.removeEventListener('touchstart', initAudio);
+        }, { once: true });
+        
     } catch (error) {
-        console.error("音乐初始化失败:", error);
+        console.error("音乐系统初始化失败:", error);
     }
 }
 
@@ -411,43 +381,18 @@ window.addEventListener('load', () => {
 }); 
 
 // 添加触摸事件处理
-canvas.addEventListener('touchstart', function(e) {
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
+document.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 1) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+document.addEventListener('touchend', (e) => {
     e.preventDefault();
 }, { passive: false });
 
-canvas.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-}, { passive: false });
-
-canvas.addEventListener('touchend', function(e) {
-    if (!gameStarted) {
-        gameStarted = true;
-        return;
-    }
-    
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-    
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
-    
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-        // 水平滑动
-        if (deltaX > minSwipeDistance && dx !== -1) {
-            dx = 1; dy = 0;
-        } else if (deltaX < -minSwipeDistance && dx !== 1) {
-            dx = -1; dy = 0;
-        }
-    } else {
-        // 垂直滑动
-        if (deltaY > minSwipeDistance && dy !== -1) {
-            dx = 0; dy = 1;
-        } else if (deltaY < -minSwipeDistance && dy !== 1) {
-            dx = 0; dy = -1;
-        }
-    }
+// 禁用双击缩放
+document.addEventListener('dblclick', (e) => {
     e.preventDefault();
 }, { passive: false });
 
@@ -491,11 +436,6 @@ document.addEventListener('touchmove', (e) => {
     e.preventDefault();
 }, { passive: false });
 
-// 阻止双击缩放
-document.addEventListener('dblclick', (e) => {
-    e.preventDefault();
-});
-
 // 修改按钮事件处理
 function initControls() {
     const buttons = {
@@ -532,8 +472,17 @@ function initControls() {
         pauseBtn.addEventListener(eventType, (e) => {
             e.preventDefault();
             e.stopPropagation();
-            gameStarted = !gameStarted;
-            pauseBtn.textContent = gameStarted ? '⏸' : '▶';
+            
+            if (gameStarted) {
+                isPaused = !isPaused;
+                pauseBtn.textContent = isPaused ? '▶' : '⏸';
+                
+                if (isPaused) {
+                    pauseBackgroundMusic();
+                } else {
+                    resumeBackgroundMusic();
+                }
+            }
         });
     });
 
@@ -552,18 +501,21 @@ function initControls() {
     });
 }
 
-// 调整画布大小
+// 修改画布大小调整函数
 function resizeCanvas() {
     const container = document.querySelector('.game-container');
-    const maxWidth = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.6);
-    const scale = window.devicePixelRatio || 1;
+    const maxSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.6);
     
-    canvas.style.width = `${maxWidth}px`;
-    canvas.style.height = `${maxWidth}px`;
-    canvas.width = maxWidth * scale;
-    canvas.height = maxWidth * scale;
+    // 设置画布大小为偶数，避免半像素问题
+    const size = Math.floor(maxSize / tileCount) * tileCount;
     
-    ctx.scale(scale, scale);
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+    canvas.width = size;
+    canvas.height = size;
+    
+    // 重新绘制
+    draw();
 }
 
 // 页面加载和方向变化时调整大小
@@ -576,3 +528,47 @@ window.addEventListener('load', () => {
 
 window.addEventListener('resize', resizeCanvas);
 window.addEventListener('orientationchange', resizeCanvas);
+
+// 修改方向控制，防止快速按键导致的自撞
+let lastUpdate = 0;
+const minUpdateInterval = 50; // 最小更新间隔（毫秒）
+
+function changeDirection(newDx, newDy) {
+    const now = Date.now();
+    if (now - lastUpdate < minUpdateInterval) {
+        return; // 如果间隔太短，忽略这次方向改变
+    }
+    
+    // 防止反向移动
+    if ((newDx === 0 && dx === 0) || (newDy === 0 && dy === 0)) {
+        if ((newDx !== -dx) && (newDy !== -dy)) {
+            dx = newDx;
+            dy = newDy;
+            lastUpdate = now;
+            
+            if (!gameStarted) {
+                gameStarted = true;
+                isPaused = false;
+            }
+        }
+    }
+}
+
+// 修改方向按钮的事件处理
+const buttons = {
+    upBtn: { dx: 0, dy: -1 },
+    downBtn: { dx: 0, dy: 1 },
+    leftBtn: { dx: -1, dy: 0 },
+    rightBtn: { dx: 1, dy: 0 }
+};
+
+Object.entries(buttons).forEach(([id, { dx: newDx, dy: newDy }]) => {
+    const button = document.getElementById(id);
+    ['touchstart', 'mousedown'].forEach(eventType => {
+        button.addEventListener(eventType, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            changeDirection(newDx, newDy);
+        });
+    });
+});

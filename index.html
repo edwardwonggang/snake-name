@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
     <title>贪吃蛇游戏</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -19,6 +19,7 @@
             -webkit-user-select: none;
             user-select: none;
             -webkit-tap-highlight-color: transparent;
+            touch-action: none;
         }
 
         html, body {
@@ -56,6 +57,8 @@
             max-width: 90vmin;
             max-height: 60vh;
             touch-action: none;
+            image-rendering: pixelated;
+            box-sizing: content-box;
         }
 
         #score {
