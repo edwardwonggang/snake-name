@@ -29,16 +29,12 @@ let musicChangeInterval;
 // 音乐列表
 const musicList = [
     {
-        url: 'https://dl.sndup.net/kt6m/piano.mp3',
-        name: 'Piano'
+        url: './music/qifengle.mp3',
+        duration: 0
     },
     {
-        url: 'https://dl.sndup.net/hkhr/soft.mp3',
-        name: 'Soft'
-    },
-    {
-        url: 'https://dl.sndup.net/rpg8/gentle.mp3',
-        name: 'Gentle'
+        url: './music/ningxia.mp3',
+        duration: 0
     }
 ];
 
@@ -179,7 +175,22 @@ function preloadMusic(url) {
 async function initMusicSystem() {
     try {
         console.log("初始化音乐系统...");
-        // 预加载音乐
+        
+        // 验证音乐文件是否存在
+        for (let music of musicList) {
+            try {
+                const response = await fetch(music.url);
+                if (!response.ok) {
+                    throw new Error(`音乐文件 ${music.url} 加载失败`);
+                }
+                console.log(`音乐文件 ${music.url} 验证成功`);
+            } catch (error) {
+                console.error(`音乐文件 ${music.url} 验证失败:`, error);
+                return false;
+            }
+        }
+
+        // 初始化音频对象
         currentMusic = new Audio();
         nextMusic = new Audio();
         
@@ -189,16 +200,24 @@ async function initMusicSystem() {
         currentMusic.volume = 0.3;
         nextMusic.volume = 0.3;
         
-        // 设置音频为可以在静音状态下播放
+        // iOS支持
         currentMusic.playsInline = true;
         nextMusic.playsInline = true;
+        currentMusic.preload = 'auto';
+        nextMusic.preload = 'auto';
         
-        // 添加错误处理
-        currentMusic.onerror = (e) => console.error("音乐加载错误:", e);
-        nextMusic.onerror = (e) => console.error("音乐加载错误:", e);
+        // 错误处理
+        currentMusic.onerror = (e) => console.error("当前音乐加载错误:", e);
+        nextMusic.onerror = (e) => console.error("下一首音乐加载错误:", e);
         
+        // 加载完成处理
+        currentMusic.onloadeddata = () => console.log("当前音乐加载完成");
+        nextMusic.onloadeddata = () => console.log("下一首音乐加载完成");
+        
+        return true;
     } catch (error) {
         console.error("音乐系统初始化失败:", error);
+        return false;
     }
 }
 
@@ -239,67 +258,25 @@ function startBackgroundMusic() {
 
 // 开始音乐轮换
 function startMusicRotation() {
-    musicChangeInterval = setInterval(async () => {
-        await switchToNextMusic();
-    }, 15000);
-}
-
-// 切换到下一首音乐
-async function switchToNextMusic() {
-    if (!nextMusic) return;
-
-    // 准备新的下一首音乐
-    const nextIndex = (currentMusicIndex + 2) % musicList.length;
-    const newNextMusic = await preloadMusic(musicList[nextIndex].url);
-
-    // 淡出当前音乐
-    fadeOutMusic(currentMusic);
+    if (!currentMusic) return;
     
-    // 淡入下一首音乐
-    nextMusic.currentTime = 0;
-    nextMusic.volume = 0;
-    const playPromise = nextMusic.play();
-    if (playPromise !== undefined) {
-        playPromise.then(() => {
-            fadeInMusic(nextMusic);
-        }).catch(error => {
-            console.error("播放失败:", error);
-        });
-    }
-
-    // 更新音乐引用
-    currentMusic = nextMusic;
-    nextMusic = newNextMusic;
-    currentMusicIndex = (currentMusicIndex + 1) % musicList.length;
-}
-
-// 淡出音乐
-function fadeOutMusic(audio) {
-    if (!audio) return;
-    
-    const fadeInterval = setInterval(() => {
-        if (audio.volume > 0.02) {
-            audio.volume -= 0.02;
-        } else {
-            clearInterval(fadeInterval);
-            audio.pause();
-            audio.volume = 0.3;
+    currentMusic.onended = async () => {
+        console.log("当前音乐播放结束，切换到下一首");
+        
+        // 交换当前音乐和下一首音乐
+        [currentMusic, nextMusic] = [nextMusic, currentMusic];
+        currentMusicIndex = (currentMusicIndex + 1) % musicList.length;
+        
+        // 设置下一首音乐
+        nextMusic.src = musicList[(currentMusicIndex + 1) % musicList.length].url;
+        
+        try {
+            await currentMusic.play();
+            console.log("切换到下一首音乐成功");
+        } catch (error) {
+            console.error("切换音乐失败:", error);
         }
-    }, 50);
-}
-
-// 淡入音乐
-function fadeInMusic(audio) {
-    if (!audio) return;
-    
-    audio.volume = 0;
-    const fadeInterval = setInterval(() => {
-        if (audio.volume < 0.3) {
-            audio.volume += 0.02;
-        } else {
-            clearInterval(fadeInterval);
-        }
-    }, 50);
+    };
 }
 
 // 暂停背景音乐
@@ -374,8 +351,9 @@ document.addEventListener('keydown', function(e) {
 });
 
 // 修改页面加载事件
-window.addEventListener('load', () => {
-    initMusicSystem();
+window.addEventListener('load', async () => {
+    console.log("页面加载完成");
+    await initMusicSystem();
     resizeCanvas();
     initControls();
     gameLoop();
@@ -515,33 +493,34 @@ function initControls() {
 
     const musicBtn = document.getElementById('musicBtn');
     if (musicBtn) {
-        musicBtn.addEventListener('click', function() {
-            console.log("音乐按钮被点击");  // 添加调试日志
+        musicBtn.addEventListener('click', async function() {
+            console.log("音乐按钮被点击");
             
-            if (currentMusic) {
-                if (currentMusic.paused) {
-                    console.log("尝试播放音乐");
-                    const playPromise = currentMusic.play();
-                    if (playPromise !== undefined) {
-                        playPromise
-                            .then(() => {
-                                console.log("音乐播放成功");
-                                musicBtn.classList.remove('muted');
-                                startMusicRotation();
-                            })
-                            .catch(error => {
-                                console.error("音乐播放失败:", error);
-                                musicBtn.classList.add('muted');
-                            });
-                    }
-                } else {
-                    console.log("暂停音乐");
-                    currentMusic.pause();
-                    nextMusic.pause();
+            if (!currentMusic) {
+                console.log("重新初始化音乐系统");
+                const initialized = await initMusicSystem();
+                if (!initialized) {
+                    console.error("音乐系统初始化失败");
+                    return;
+                }
+            }
+            
+            if (currentMusic.paused) {
+                console.log("尝试播放音乐");
+                try {
+                    await currentMusic.play();
+                    console.log("音乐播放成功");
+                    musicBtn.classList.remove('muted');
+                    startMusicRotation();
+                } catch (error) {
+                    console.error("音乐播放失败:", error);
                     musicBtn.classList.add('muted');
                 }
             } else {
-                console.log("音频对象未初始化");
+                console.log("暂停音乐");
+                currentMusic.pause();
+                nextMusic.pause();
+                musicBtn.classList.add('muted');
             }
         });
     } else {
