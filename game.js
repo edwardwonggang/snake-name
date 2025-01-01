@@ -42,6 +42,11 @@ const musicList = [
     }
 ];
 
+// 添加触摸控制变量
+let touchStartX = 0;
+let touchStartY = 0;
+const minSwipeDistance = 30;
+
 // 游戏主循环
 function gameLoop() {
     clearInterval(gameInterval);
@@ -405,35 +410,89 @@ window.addEventListener('load', () => {
     gameLoop();
 }); 
 
-/ 添加触摸控制
-document.getElementById('upBtn').addEventListener('click', () => {
+// 添加触摸事件处理
+canvas.addEventListener('touchstart', function(e) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', function(e) {
+    if (!gameStarted) {
+        gameStarted = true;
+        return;
+    }
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        // 水平滑动
+        if (deltaX > minSwipeDistance && dx !== -1) {
+            dx = 1; dy = 0;
+        } else if (deltaX < -minSwipeDistance && dx !== 1) {
+            dx = -1; dy = 0;
+        }
+    } else {
+        // 垂直滑动
+        if (deltaY > minSwipeDistance && dy !== -1) {
+            dx = 0; dy = 1;
+        } else if (deltaY < -minSwipeDistance && dy !== 1) {
+            dx = 0; dy = -1;
+        }
+    }
+    e.preventDefault();
+}, { passive: false });
+
+// 修改按钮事件处理
+document.getElementById('upBtn').addEventListener('touchstart', (e) => {
     if (dy !== 1) { dx = 0; dy = -1; }
-});
+    if (!gameStarted) gameStarted = true;
+    e.preventDefault();
+}, { passive: false });
 
-document.getElementById('downBtn').addEventListener('click', () => {
+document.getElementById('downBtn').addEventListener('touchstart', (e) => {
     if (dy !== -1) { dx = 0; dy = 1; }
-});
+    if (!gameStarted) gameStarted = true;
+    e.preventDefault();
+}, { passive: false });
 
-document.getElementById('leftBtn').addEventListener('click', () => {
+document.getElementById('leftBtn').addEventListener('touchstart', (e) => {
     if (dx !== 1) { dx = -1; dy = 0; }
-});
+    if (!gameStarted) gameStarted = true;
+    e.preventDefault();
+}, { passive: false });
 
-document.getElementById('rightBtn').addEventListener('click', () => {
+document.getElementById('rightBtn').addEventListener('touchstart', (e) => {
     if (dx !== -1) { dx = 1; dy = 0; }
-});
+    if (!gameStarted) gameStarted = true;
+    e.preventDefault();
+}, { passive: false });
 
-document.getElementById('pauseBtn').addEventListener('click', () => {
+document.getElementById('pauseBtn').addEventListener('touchstart', (e) => {
     gameStarted = !gameStarted;
     if (gameStarted) {
         resumeBackgroundMusic();
     } else {
         pauseBackgroundMusic();
     }
-});
+    e.preventDefault();
+}, { passive: false });
 
-document.getElementById('muteBtn').addEventListener('click', () => {
-    if (currentMusic) {
-        currentMusic.muted = !currentMusic.muted;
-        if (nextMusic) nextMusic.muted = currentMusic.muted;
-    }
-});
+// 调整画布大小
+function resizeCanvas() {
+    const size = Math.min(window.innerWidth * 0.95, window.innerHeight * 0.7);
+    canvas.style.width = `${size}px`;
+    canvas.style.height = `${size}px`;
+}
+
+// 添加窗口大小改变事件
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('load', resizeCanvas);
