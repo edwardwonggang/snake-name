@@ -175,55 +175,63 @@ function preloadMusic(url) {
     });
 }
 
-// 初始化音乐系统
+// 修改初始化音乐系统
 async function initMusicSystem() {
     try {
         console.log("初始化音乐系统...");
         // 预加载音乐
-        currentMusic = new Audio(musicList[0].url);
-        nextMusic = new Audio(musicList[1].url);
+        currentMusic = new Audio();
+        nextMusic = new Audio();
         
-        // 设置音量
+        // 设置音频属性
+        currentMusic.src = musicList[0].url;
+        nextMusic.src = musicList[1].url;
         currentMusic.volume = 0.3;
         nextMusic.volume = 0.3;
+        
+        // 设置音频为可以在静音状态下播放
+        currentMusic.playsInline = true;
+        nextMusic.playsInline = true;
         
         // 添加错误处理
         currentMusic.onerror = (e) => console.error("音乐加载错误:", e);
         nextMusic.onerror = (e) => console.error("音乐加载错误:", e);
-        
-        // 自动播放处理
-        document.addEventListener('touchstart', function initAudio() {
-            console.log("尝试播放音乐...");
-            currentMusic.play()
-                .then(() => console.log("音乐开始播放"))
-                .catch(e => console.error("播放失败:", e));
-            document.removeEventListener('touchstart', initAudio);
-        }, { once: true });
         
     } catch (error) {
         console.error("音乐系统初始化失败:", error);
     }
 }
 
-// 开始背景音乐
+// 修改开始背景音乐函数
 function startBackgroundMusic() {
     if (currentMusic) {
         console.log("尝试播放音乐...");
+        // 确保音频已加载
+        currentMusic.load();
+        
         const playPromise = currentMusic.play();
         if (playPromise !== undefined) {
             playPromise.then(() => {
                 console.log("音乐开始播放");
+                startMusicRotation(); // 开始音乐轮换
             }).catch(error => {
-                console.log("自动播放失败，等待用户交互:", error);
-                // 添加点击事件监听器
-                document.addEventListener('click', function playOnClick() {
-                    currentMusic.play().then(() => {
-                        console.log("用户交互后开始播放");
-                    }).catch(err => {
-                        console.log("播放失败:", err);
-                    });
-                    document.removeEventListener('click', playOnClick);
-                }, { once: true });
+                console.error("播放失败:", error);
+                // 添加用户交互监听
+                const startAudio = () => {
+                    currentMusic.play()
+                        .then(() => {
+                            console.log("用户交互后开始播放");
+                            startMusicRotation();
+                            // 移除所有事件监听
+                            document.removeEventListener('touchstart', startAudio);
+                            document.removeEventListener('click', startAudio);
+                        })
+                        .catch(err => console.error("播放失败:", err));
+                };
+                
+                // 同时监听触摸和点击事件
+                document.addEventListener('touchstart', startAudio);
+                document.addEventListener('click', startAudio);
             });
         }
     }
@@ -365,20 +373,25 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// 修改初始化调用
+// 修改页面加载事件
 window.addEventListener('load', () => {
     initMusicSystem();
+    resizeCanvas();
+    initControls();
+    gameLoop();
     
-    // 添加用户交互监听器来开始播放
-    document.addEventListener('click', function startAudioOnClick() {
+    // 添加多个用户交互事件来触发音频播放
+    const startAudioOnInteraction = () => {
         if (currentMusic && currentMusic.paused) {
             startBackgroundMusic();
         }
-        document.removeEventListener('click', startAudioOnClick);
-    }, { once: true });
+    };
     
-    gameLoop();
-}); 
+    // 监听多种交互事件
+    document.addEventListener('touchstart', startAudioOnInteraction, { once: true });
+    document.addEventListener('click', startAudioOnInteraction, { once: true });
+    document.addEventListener('keydown', startAudioOnInteraction, { once: true });
+});
 
 // 添加触摸事件处理
 document.addEventListener('touchstart', (e) => {
