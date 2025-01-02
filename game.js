@@ -18,9 +18,9 @@ let gameInterval;
 let gameStarted = false;
 
 // 触摸控制变量
-let touchStartX = 0;
-let touchStartY = 0;
-const minSwipeDistance = 30;
+let touchStartX = null;
+let touchStartY = null;
+const minSwipeDistance = 20;
 
 // 音乐系统
 let currentMusic = null;
@@ -147,52 +147,58 @@ function gameOver() {
 
 // 触摸控制
 canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    
     if (!gameStarted) {
         gameStarted = true;
         gameLoop();
     }
-    e.preventDefault();
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
-    if (!touchStartX || !touchStartY) return;
+    e.preventDefault();
+    if (touchStartX === null || touchStartY === null) return;
 
     const touchEndX = e.touches[0].clientX;
     const touchEndY = e.touches[0].clientY;
     const deltaX = touchEndX - touchStartX;
     const deltaY = touchEndY - touchStartY;
-    
+
+    // 如果滑动距离超过阈值
     if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
-        // 确定主要的滑动方向
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
             // 水平滑动
-            if (deltaX > 0 && dx === 0) { // 向右滑动
-                dx = 1; dy = 0;
-            } else if (deltaX < 0 && dx === 0) { // 向左滑动
-                dx = -1; dy = 0;
+            if (deltaX > 0 && dy !== 0) { // 向右滑动，且当前不是水平移动
+                dx = 1;
+                dy = 0;
+            } else if (deltaX < 0 && dy !== 0) { // 向左滑动，且当前不是水平移动
+                dx = -1;
+                dy = 0;
             }
         } else {
             // 垂直滑动
-            if (deltaY > 0 && dy === 0) { // 向下滑动
-                dx = 0; dy = 1;
-            } else if (deltaY < 0 && dy === 0) { // 向上滑动
-                dx = 0; dy = -1;
+            if (deltaY > 0 && dx !== 0) { // 向下滑动，且当前不是垂直移动
+                dx = 0;
+                dy = 1;
+            } else if (deltaY < 0 && dx !== 0) { // 向上滑动，且当前不是垂直移动
+                dx = 0;
+                dy = -1;
             }
         }
         
-        // 重置触摸起点，防止连续触发
-        touchStartX = null;
-        touchStartY = null;
+        // 重置触摸起点
+        touchStartX = touchEndX;
+        touchStartY = touchEndY;
     }
-    e.preventDefault();
 }, { passive: false });
 
-canvas.addEventListener('touchend', () => {
+canvas.addEventListener('touchend', (e) => {
+    e.preventDefault();
     touchStartX = null;
     touchStartY = null;
-});
+}, { passive: false });
 
 // 音乐系统
 async function initMusicSystem() {
