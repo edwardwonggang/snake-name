@@ -35,10 +35,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             background: #f0f0f0;
             padding-top: env(safe-area-inset-top, 20px);
-            padding-bottom: calc(var(--safe-area-inset-bottom) + 20px);
+            padding-bottom: var(--safe-area-inset-bottom);
         }
 
         .game-container {
@@ -55,7 +55,7 @@
         #gameCanvas {
             border: 2px solid black;
             max-width: 90vmin;
-            max-height: 60vh;
+            max-height: 90vh;
             touch-action: none;
             image-rendering: pixelated;
             box-sizing: content-box;
@@ -67,74 +67,12 @@
             font-weight: bold;
             font-family: -apple-system, system-ui, BlinkMacSystemFont;
         }
-
-        .controls {
-            width: 100%;
-            max-width: 300px;
-            padding: 15px;
-            box-sizing: border-box;
-            display: grid;
-            grid-template-areas:
-                ". up mute"
-                "left pause right"
-                ". down .";
-            gap: 15px;
-            justify-content: center;
-            margin-bottom: env(safe-area-inset-bottom, 0);
-        }
-
-        .control-btn {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: none;
-            background: #4CAF50;
-            color: white;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            touch-action: manipulation;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .control-btn:active {
-            background: #45a049;
-            transform: scale(0.95);
-        }
-
-        #upBtn { grid-area: up; }
-        #leftBtn { grid-area: left; }
-        #rightBtn { grid-area: right; }
-        #downBtn { grid-area: down; }
-        #pauseBtn { grid-area: pause; }
-        #muteBtn { grid-area: mute; }
-
-        @supports (-webkit-touch-callout: none) {
-            .control-btn {
-                cursor: pointer;
-                -webkit-touch-callout: none;
-            }
-        }
     </style>
 </head>
 <body>
     <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
         <div id="score">分数: 0</div>
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-    </div>
-    <div class="controls">
-        <button class="control-btn" id="upBtn">↑</button>
-        <button class="control-btn" id="leftBtn">←</button>
-        <button class="control-btn" id="rightBtn">→</button>
-        <button class="control-btn" id="downBtn">↓</button>
-        <button class="control-btn" id="pauseBtn">⏸</button>
-        <button class="control-btn" id="muteBtn">🔊</button>
-        <button id="musicBtn" class="music-btn muted" aria-label="背景音乐控制">
-            🎵
-        </button>
     </div>
     <script src="game.js"></script>
 </body>
