@@ -388,7 +388,7 @@ document.addEventListener('keydown', function(e) {
 // 修改页面加载事件
 window.addEventListener('load', async () => {
     console.log("页面加载完成");
-    removeButtonControls(); // 隐藏所有控制按钮
+    removeButtonControls(); // 移除所有按钮
     await initMusicSystem();
     resizeCanvas();
     gameLoop();
@@ -456,20 +456,10 @@ document.addEventListener('touchmove', (e) => {
 
 // 修改按钮事件处理
 function initControls() {
-    const musicBtn = document.getElementById('musicBtn');
-    if (!musicBtn) {
-        console.error("未找到音乐按钮");
-        return;
-    }
-
-    // 检测是否是 iOS 设备
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    console.log("是否为iOS设备:", isIOS);
-
-    // 针对 iOS 的特殊处理
+    
     if (isIOS) {
         document.addEventListener('touchstart', function() {
-            // iOS 需要用户交互才能播放音频
             if (currentMusic) {
                 currentMusic.load();
             }
@@ -477,70 +467,6 @@ function initControls() {
                 nextMusic.load();
             }
         }, { once: true });
-    }
-
-    musicBtn.addEventListener('click', async function(event) {
-        // 防止事件冒泡
-        event.preventDefault();
-        event.stopPropagation();
-        
-        console.log("音乐按钮被点击");
-        
-        if (!currentMusic) {
-            console.log("重新初始化音乐系统");
-            const initialized = await initMusicSystem();
-            if (!initialized) {
-                console.error("音乐系统初始化失败");
-                return;
-            }
-        }
-        
-        try {
-            if (currentMusic.paused) {
-                console.log("尝试播放音乐");
-                await currentMusic.play();
-                console.log("音乐播放成功");
-                musicBtn.classList.remove('muted');
-                startMusicRotation();
-            } else {
-                console.log("暂停音乐");
-                currentMusic.pause();
-                nextMusic.pause();
-                musicBtn.classList.add('muted');
-            }
-        } catch (error) {
-            console.error("音乐控制失败:", error);
-            // iOS 特殊处理
-            if (isIOS) {
-                currentMusic.load();
-                try {
-                    await currentMusic.play();
-                    musicBtn.classList.remove('muted');
-                    startMusicRotation();
-                } catch (iosError) {
-                    console.error("iOS音乐播放失败:", iosError);
-                    musicBtn.classList.add('muted');
-                }
-            }
-        }
-    });
-
-    // 添加音频状态变化监听
-    if (currentMusic) {
-        currentMusic.addEventListener('playing', () => {
-            console.log("音乐开始播放");
-            musicBtn.classList.remove('muted');
-        });
-
-        currentMusic.addEventListener('pause', () => {
-            console.log("音乐已暂停");
-            musicBtn.classList.add('muted');
-        });
-
-        currentMusic.addEventListener('ended', () => {
-            console.log("音乐已结束");
-            // 不需要在这里修改按钮状态，因为会自动切换到下一首
-        });
     }
 }
 
@@ -618,11 +544,23 @@ Object.entries(buttons).forEach(([id, { dx: newDx, dy: newDy }]) => {
 
 // 移除所有按钮相关的事件监听器
 function removeButtonControls() {
-    const buttons = ['upBtn', 'downBtn', 'leftBtn', 'rightBtn', 'pauseBtn'];
+    // 移除所有按钮元素
+    const buttons = [
+        'upBtn', 'downBtn', 'leftBtn', 'rightBtn', 
+        'pauseBtn', 'musicBtn', 'volumeUpBtn', 'volumeDownBtn'
+    ];
     buttons.forEach(btnId => {
         const btn = document.getElementById(btnId);
         if (btn) {
-            btn.style.display = 'none'; // 隐藏按钮
+            btn.remove(); // 完全移除按钮元素
         }
     });
 }
+
+// 移除所有按钮相关的事件监听器
+document.getElementById('upBtn')?.remove();
+document.getElementById('downBtn')?.remove();
+document.getElementById('leftBtn')?.remove();
+document.getElementById('rightBtn')?.remove();
+document.getElementById('pauseBtn')?.remove();
+document.getElementById('musicBtn')?.remove();
