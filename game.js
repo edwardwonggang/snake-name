@@ -42,11 +42,19 @@ async function initGame() {
 // 调整画布大小
 function resizeCanvas() {
     const maxSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.6);
-    const size = Math.floor(maxSize / tileCount) * tileCount;
+    const size = Math.floor(maxSize / gridSize) * gridSize;
+    
+    // 设置显示尺寸
     canvas.style.width = `${size}px`;
     canvas.style.height = `${size}px`;
+    
+    // 设置实际尺寸
     canvas.width = size;
     canvas.height = size;
+    
+    // 更新网格数量
+    tileCount = size / gridSize;
+    
     draw();
 }
 
@@ -103,20 +111,20 @@ function draw() {
     ctx.fillStyle = 'green';
     snake.forEach(segment => {
         ctx.fillRect(
-            segment.x * gridSize + 1,
-            segment.y * gridSize + 1,
-            gridSize - 2,
-            gridSize - 2
+            segment.x * gridSize,
+            segment.y * gridSize,
+            gridSize - 1,
+            gridSize - 1
         );
     });
     
     // 绘制食物
     ctx.fillStyle = 'red';
     ctx.fillRect(
-        food.x * gridSize + 1,
-        food.y * gridSize + 1,
-        gridSize - 2,
-        gridSize - 2
+        food.x * gridSize,
+        food.y * gridSize,
+        gridSize - 1,
+        gridSize - 1
     );
 }
 
@@ -125,8 +133,8 @@ function generateFood() {
     let newFood;
     do {
         newFood = {
-            x: Math.floor(Math.random() * tileCount),
-            y: Math.floor(Math.random() * tileCount)
+            x: Math.floor(Math.random() * (tileCount - 1)),
+            y: Math.floor(Math.random() * (tileCount - 1))
         };
     } while (snake.some(segment => segment.x === newFood.x && segment.y === newFood.y));
     food = newFood;
@@ -148,20 +156,25 @@ function gameOver() {
 // 触摸控制
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    // 检查触摸点是否在画布范围内
-    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-        touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+    const rect = canvas.getBoundingClientRect();
+    
+    // 转换触摸坐标为相对于 canvas 的坐标
+    const relativeX = touch.clientX - rect.left;
+    const relativeY = touch.clientY - rect.top;
+    
+    // 检查触摸是否在 canvas 内
+    if (relativeX >= 0 && relativeX <= rect.width &&
+        relativeY >= 0 && relativeY <= rect.height) {
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
-    }
-    
-    if (!gameStarted) {
-        gameStarted = true;
-        dx = 1; // 设置初始移动方向为向右
-        dy = 0;
-        gameLoop();
+        
+        if (!gameStarted) {
+            gameStarted = true;
+            dx = 1; // 设置初始方向为向右
+            dy = 0;
+            gameLoop();
+        }
     }
 }, { passive: false });
 
@@ -169,44 +182,34 @@ canvas.addEventListener('touchmove', (e) => {
     e.preventDefault();
     if (touchStartX === null || touchStartY === null) return;
 
-    const touchEndX = e.touches[0].clientX;
-    const touchEndY = e.touches[0].clientY;
-    const deltaX = touchEndX - touchStartX;
-    const deltaY = touchEndY - touchStartY;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
 
-    // 如果滑动距离超过阈值
     if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
             // 水平滑动
-            if (deltaX > 0) { // 向右滑动
-                if (dy !== 0) { // 只有当前不是水平移动时才改变方向
-                    dx = 1;
-                    dy = 0;
-                }
-            } else { // 向左滑动
-                if (dy !== 0) { // 只有当前不是水平移动时才改变方向
-                    dx = -1;
-                    dy = 0;
-                }
+            if (deltaX > 0 && dy !== 0) { // 向右滑动
+                dx = 1;
+                dy = 0;
+            } else if (deltaX < 0 && dy !== 0) { // 向左滑动
+                dx = -1;
+                dy = 0;
             }
         } else {
             // 垂直滑动
-            if (deltaY > 0) { // 向下滑动
-                if (dx !== 0) { // 只有当前不是垂直移动时才改变方向
-                    dx = 0;
-                    dy = 1;
-                }
-            } else { // 向上滑动
-                if (dx !== 0) { // 只有当前不是垂直移动时才改变方向
-                    dx = 0;
-                    dy = -1;
-                }
+            if (deltaY > 0 && dx !== 0) { // 向下滑动
+                dx = 0;
+                dy = 1;
+            } else if (deltaY < 0 && dx !== 0) { // 向上滑动
+                dx = 0;
+                dy = -1;
             }
         }
         
-        // 重置触摸起点
-        touchStartX = touchEndX;
-        touchStartY = touchEndY;
+        // 更新触摸起点
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
     }
 }, { passive: false });
 
