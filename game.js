@@ -41,24 +41,34 @@ async function initGame() {
 
 // 调整画布大小
 function resizeCanvas() {
-    const maxSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.6);
-    const size = Math.floor(maxSize / gridSize) * gridSize;
+    // 获取容器大小
+    const gameContainer = document.querySelector('.game-container');
+    const containerWidth = gameContainer.clientWidth;
+    const containerHeight = gameContainer.clientHeight;
     
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
-    canvas.width = size;
-    canvas.height = size;
+    // 计算可用空间中最大的正方形尺寸
+    const size = Math.min(containerWidth * 0.9, containerHeight * 0.8);
     
-    tileCount = canvas.width / gridSize;
+    // 确保尺寸是 gridSize 的整数倍
+    const adjustedSize = Math.floor(size / gridSize) * gridSize;
     
-    // 确保蛇和食物在新的范围内
+    // 设置 canvas 尺寸
+    canvas.width = adjustedSize;
+    canvas.height = adjustedSize;
+    
+    // 更新网格数量
+    tileCount = adjustedSize / gridSize;
+    
+    // 确保蛇和食物在有效范围内
     snake = snake.map(segment => ({
         x: Math.min(segment.x, tileCount - 1),
         y: Math.min(segment.y, tileCount - 1)
     }));
     
-    food.x = Math.min(food.x, tileCount - 1);
-    food.y = Math.min(food.y, tileCount - 1);
+    food = {
+        x: Math.min(food.x, tileCount - 1),
+        y: Math.min(food.y, tileCount - 1)
+    };
     
     draw();
 }
@@ -79,11 +89,13 @@ function update() {
 
     const head = { x: snake[0].x + dx, y: snake[0].y + dy };
     
-    // 边界处理
-    head.x = (head.x + tileCount) % tileCount;
-    head.y = (head.y + tileCount) % tileCount;
+    // 更新边界检测逻辑
+    if (head.x < 0) head.x = tileCount - 1;
+    if (head.x >= tileCount) head.x = 0;
+    if (head.y < 0) head.y = tileCount - 1;
+    if (head.y >= tileCount) head.y = 0;
     
-    // 碰撞检测
+    // 检查自身碰撞
     for (let i = 0; i < snake.length; i++) {
         if (snake[i].x === head.x && snake[i].y === head.y) {
             gameOver();
@@ -93,7 +105,6 @@ function update() {
     
     snake.unshift(head);
     
-    // 吃到食物
     if (head.x === food.x && head.y === food.y) {
         score += 10;
         scoreElement.textContent = `分数: ${score}`;
@@ -157,28 +168,27 @@ function gameOver() {
 }
 
 // 触摸控制
-document.addEventListener('touchstart', (e) => {
-    const touch = e.touches[0];
-    const rect = canvas.getBoundingClientRect();
-    
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
+function handleTouchStart(e) {
+    e.preventDefault();
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
     
     if (!gameStarted) {
         gameStarted = true;
-        dx = 1;
+        dx = 1;  // 开始时向右移动
         dy = 0;
         gameLoop();
     }
-    e.preventDefault();
-}, { passive: false });
+}
 
-document.addEventListener('touchmove', (e) => {
+function handleTouchMove(e) {
+    e.preventDefault();
     if (!touchStartX || !touchStartY) return;
 
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - touchStartX;
-    const deltaY = touch.clientY - touchStartY;
+    const touchEndX = e.touches[0].clientX;
+    const touchEndY = e.touches[0].clientY;
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
 
     if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -200,18 +210,24 @@ document.addEventListener('touchmove', (e) => {
                 dy = -1;
             }
         }
-        
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
     }
-    e.preventDefault();
-}, { passive: false });
+}
 
-document.addEventListener('touchend', (e) => {
+function handleTouchEnd(e) {
+    e.preventDefault();
     touchStartX = null;
     touchStartY = null;
-    e.preventDefault();
-}, { passive: false });
+}
+
+// 移除之前的事件监听器，添加新的事件监听器
+document.removeEventListener('touchstart', handleTouchStart);
+document.removeEventListener('touchmove', handleTouchMove);
+document.removeEventListener('touchend', handleTouchEnd);
+
+// 添加到整个文档
+document.addEventListener('touchstart', handleTouchStart, { passive: false });
+document.addEventListener('touchmove', handleTouchMove, { passive: false });
+document.addEventListener('touchend', handleTouchEnd, { passive: false });
 
 // 音乐系统
 async function initMusicSystem() {
