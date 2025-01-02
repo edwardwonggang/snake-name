@@ -66,7 +66,7 @@ function update() {
 
     const head = { x: snake[0].x + dx, y: snake[0].y + dy };
     
-    // 边界处理
+    // 边界处理 - 确保蛇能到达边界
     if (head.x < 0) head.x = tileCount - 1;
     if (head.x >= tileCount) head.x = 0;
     if (head.y < 0) head.y = tileCount - 1;
@@ -148,11 +148,19 @@ function gameOver() {
 // 触摸控制
 canvas.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
+    const rect = canvas.getBoundingClientRect();
+    const touch = e.touches[0];
+    // 检查触摸点是否在画布范围内
+    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+        touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+    }
     
     if (!gameStarted) {
         gameStarted = true;
+        dx = 1; // 设置初始移动方向为向右
+        dy = 0;
         gameLoop();
     }
 }, { passive: false });
@@ -170,21 +178,29 @@ canvas.addEventListener('touchmove', (e) => {
     if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
             // 水平滑动
-            if (deltaX > 0 && dy !== 0) { // 向右滑动，且当前不是水平移动
-                dx = 1;
-                dy = 0;
-            } else if (deltaX < 0 && dy !== 0) { // 向左滑动，且当前不是水平移动
-                dx = -1;
-                dy = 0;
+            if (deltaX > 0) { // 向右滑动
+                if (dy !== 0) { // 只有当前不是水平移动时才改变方向
+                    dx = 1;
+                    dy = 0;
+                }
+            } else { // 向左滑动
+                if (dy !== 0) { // 只有当前不是水平移动时才改变方向
+                    dx = -1;
+                    dy = 0;
+                }
             }
         } else {
             // 垂直滑动
-            if (deltaY > 0 && dx !== 0) { // 向下滑动，且当前不是垂直移动
-                dx = 0;
-                dy = 1;
-            } else if (deltaY < 0 && dx !== 0) { // 向上滑动，且当前不是垂直移动
-                dx = 0;
-                dy = -1;
+            if (deltaY > 0) { // 向下滑动
+                if (dx !== 0) { // 只有当前不是垂直移动时才改变方向
+                    dx = 0;
+                    dy = 1;
+                }
+            } else { // 向上滑动
+                if (dx !== 0) { // 只有当前不是垂直移动时才改变方向
+                    dx = 0;
+                    dy = -1;
+                }
             }
         }
         
