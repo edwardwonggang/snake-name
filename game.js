@@ -4,12 +4,12 @@ const scoreElement = document.getElementById('score');
 
 // 游戏基础设置
 const gridSize = 20;
-const tileCount = canvas.width / gridSize;
+let tileCount;
 let score = 0;
 let snake = [{x: 10, y: 10}];
 let food = {
-    x: Math.floor(Math.random() * tileCount),
-    y: Math.floor(Math.random() * tileCount)
+    x: Math.floor(Math.random() * 20),
+    y: Math.floor(Math.random() * 20)
 };
 let dx = 0;
 let dy = 0;
@@ -44,16 +44,21 @@ function resizeCanvas() {
     const maxSize = Math.min(window.innerWidth * 0.9, window.innerHeight * 0.6);
     const size = Math.floor(maxSize / gridSize) * gridSize;
     
-    // 设置显示尺寸
     canvas.style.width = `${size}px`;
     canvas.style.height = `${size}px`;
-    
-    // 设置实际尺寸
     canvas.width = size;
     canvas.height = size;
     
-    // 更新网格数量
-    tileCount = size / gridSize;
+    tileCount = canvas.width / gridSize;
+    
+    // 确保蛇和食物在新的范围内
+    snake = snake.map(segment => ({
+        x: Math.min(segment.x, tileCount - 1),
+        y: Math.min(segment.y, tileCount - 1)
+    }));
+    
+    food.x = Math.min(food.x, tileCount - 1);
+    food.y = Math.min(food.y, tileCount - 1);
     
     draw();
 }
@@ -74,11 +79,9 @@ function update() {
 
     const head = { x: snake[0].x + dx, y: snake[0].y + dy };
     
-    // 边界处理 - 确保蛇能到达边界
-    if (head.x < 0) head.x = tileCount - 1;
-    if (head.x >= tileCount) head.x = 0;
-    if (head.y < 0) head.y = tileCount - 1;
-    if (head.y >= tileCount) head.y = 0;
+    // 边界处理
+    head.x = (head.x + tileCount) % tileCount;
+    head.y = (head.y + tileCount) % tileCount;
     
     // 碰撞检测
     for (let i = 0; i < snake.length; i++) {
@@ -133,8 +136,8 @@ function generateFood() {
     let newFood;
     do {
         newFood = {
-            x: Math.floor(Math.random() * (tileCount - 1)),
-            y: Math.floor(Math.random() * (tileCount - 1))
+            x: Math.floor(Math.random() * tileCount),
+            y: Math.floor(Math.random() * tileCount)
         };
     } while (snake.some(segment => segment.x === newFood.x && segment.y === newFood.y));
     food = newFood;
@@ -154,33 +157,24 @@ function gameOver() {
 }
 
 // 触摸控制
-canvas.addEventListener('touchstart', (e) => {
-    e.preventDefault();
+document.addEventListener('touchstart', (e) => {
     const touch = e.touches[0];
     const rect = canvas.getBoundingClientRect();
     
-    // 转换触摸坐标为相对于 canvas 的坐标
-    const relativeX = touch.clientX - rect.left;
-    const relativeY = touch.clientY - rect.top;
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
     
-    // 检查触摸是否在 canvas 内
-    if (relativeX >= 0 && relativeX <= rect.width &&
-        relativeY >= 0 && relativeY <= rect.height) {
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
-        
-        if (!gameStarted) {
-            gameStarted = true;
-            dx = 1; // 设置初始方向为向右
-            dy = 0;
-            gameLoop();
-        }
+    if (!gameStarted) {
+        gameStarted = true;
+        dx = 1;
+        dy = 0;
+        gameLoop();
     }
+    e.preventDefault();
 }, { passive: false });
 
-canvas.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    if (touchStartX === null || touchStartY === null) return;
+document.addEventListener('touchmove', (e) => {
+    if (!touchStartX || !touchStartY) return;
 
     const touch = e.touches[0];
     const deltaX = touch.clientX - touchStartX;
@@ -207,16 +201,16 @@ canvas.addEventListener('touchmove', (e) => {
             }
         }
         
-        // 更新触摸起点
         touchStartX = touch.clientX;
         touchStartY = touch.clientY;
     }
+    e.preventDefault();
 }, { passive: false });
 
-canvas.addEventListener('touchend', (e) => {
-    e.preventDefault();
+document.addEventListener('touchend', (e) => {
     touchStartX = null;
     touchStartY = null;
+    e.preventDefault();
 }, { passive: false });
 
 // 音乐系统
