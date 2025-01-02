@@ -38,10 +38,54 @@ const musicList = [
     }
 ];
 
-// 添加触摸控制变量
+// 修改触摸控制变量
 let touchStartX = 0;
 let touchStartY = 0;
-const minSwipeDistance = 30;
+const minSwipeDistance = 30; // 最小滑动距离
+
+// 添加触摸事件处理
+canvas.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+    if (!touchStartX || !touchStartY) return;
+
+    const touchEndX = e.touches[0].clientX;
+    const touchEndY = e.touches[0].clientY;
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    
+    if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+            // 水平滑动
+            if (deltaX > 0 && dx !== -1) {
+                changeDirection(1, 0); // 右
+            } else if (deltaX < 0 && dx !== 1) {
+                changeDirection(-1, 0); // 左
+            }
+        } else {
+            // 垂直滑动
+            if (deltaY > 0 && dy !== -1) {
+                changeDirection(0, 1); // 下
+            } else if (deltaY < 0 && dy !== 1) {
+                changeDirection(0, -1); // 上
+            }
+        }
+        
+        touchStartX = touchEndX;
+        touchStartY = touchEndY;
+    }
+    e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => {
+    touchStartX = null;
+    touchStartY = null;
+});
 
 // 添加游戏状态变量
 let isPaused = false;
@@ -179,6 +223,11 @@ async function initMusicSystem() {
         currentMusic = new Audio();
         nextMusic = new Audio();
         
+        currentMusic.autoplay = true; // 添加自动播放
+        currentMusic.loop = false; // 禁用循环，使用我们的切换逻辑
+        nextMusic.autoplay = true;
+        nextMusic.loop = false;
+        
         // iOS Safari 特殊设置
         currentMusic.playsInline = true;
         nextMusic.playsInline = true;
@@ -198,6 +247,8 @@ async function initMusicSystem() {
         await currentMusic.load();
         await nextMusic.load();
         
+        // 自动开始播放
+        startBackgroundMusic();
         return true;
     } catch (error) {
         console.error("音乐系统初始化失败:", error);
@@ -337,22 +388,14 @@ document.addEventListener('keydown', function(e) {
 // 修改页面加载事件
 window.addEventListener('load', async () => {
     console.log("页面加载完成");
+    removeButtonControls(); // 隐藏所有控制按钮
     await initMusicSystem();
     resizeCanvas();
-    initControls();
     gameLoop();
     
-    // 添加多个用户交互事件来触发音频播放
-    const startAudioOnInteraction = () => {
-        if (currentMusic && currentMusic.paused) {
-            startBackgroundMusic();
-        }
-    };
-    
-    // 监听多种交互事件
-    document.addEventListener('touchstart', startAudioOnInteraction, { once: true });
-    document.addEventListener('click', startAudioOnInteraction, { once: true });
-    document.addEventListener('keydown', startAudioOnInteraction, { once: true });
+    // 自动开始游戏
+    gameStarted = true;
+    startBackgroundMusic();
 });
 
 // 添加触摸事件处理
@@ -572,3 +615,14 @@ Object.entries(buttons).forEach(([id, { dx: newDx, dy: newDy }]) => {
         });
     });
 });
+
+// 移除所有按钮相关的事件监听器
+function removeButtonControls() {
+    const buttons = ['upBtn', 'downBtn', 'leftBtn', 'rightBtn', 'pauseBtn'];
+    buttons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.style.display = 'none'; // 隐藏按钮
+        }
+    });
+}
