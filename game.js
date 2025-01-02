@@ -149,6 +149,10 @@ function gameOver() {
 canvas.addEventListener('touchstart', (e) => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
+    if (!gameStarted) {
+        gameStarted = true;
+        gameLoop();
+    }
     e.preventDefault();
 }, { passive: false });
 
@@ -161,22 +165,26 @@ canvas.addEventListener('touchmove', (e) => {
     const deltaY = touchEndY - touchStartY;
     
     if (Math.abs(deltaX) > minSwipeDistance || Math.abs(deltaY) > minSwipeDistance) {
+        // 确定主要的滑动方向
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            if (deltaX > 0 && dx !== -1) {
+            // 水平滑动
+            if (deltaX > 0 && dx === 0) { // 向右滑动
                 dx = 1; dy = 0;
-            } else if (deltaX < 0 && dx !== 1) {
+            } else if (deltaX < 0 && dx === 0) { // 向左滑动
                 dx = -1; dy = 0;
             }
         } else {
-            if (deltaY > 0 && dy !== -1) {
+            // 垂直滑动
+            if (deltaY > 0 && dy === 0) { // 向下滑动
                 dx = 0; dy = 1;
-            } else if (deltaY < 0 && dy !== 1) {
+            } else if (deltaY < 0 && dy === 0) { // 向上滑动
                 dx = 0; dy = -1;
             }
         }
         
-        touchStartX = touchEndX;
-        touchStartY = touchEndY;
+        // 重置触摸起点，防止连续触发
+        touchStartX = null;
+        touchStartY = null;
     }
     e.preventDefault();
 }, { passive: false });
@@ -192,9 +200,9 @@ async function initMusicSystem() {
         currentMusic = new Audio();
         nextMusic = new Audio();
         
-        currentMusic.autoplay = true;
+        currentMusic.autoplay = false;
         currentMusic.loop = false;
-        nextMusic.autoplay = true;
+        nextMusic.autoplay = false;
         nextMusic.loop = false;
         
         currentMusic.playsInline = true;
@@ -208,7 +216,11 @@ async function initMusicSystem() {
         await currentMusic.load();
         await nextMusic.load();
         
-        startBackgroundMusic();
+        // 等待用户交互后再开始播放音乐
+        document.addEventListener('touchstart', () => {
+            startBackgroundMusic();
+        }, { once: true });
+        
         return true;
     } catch (error) {
         console.error("音乐系统初始化失败:", error);
@@ -221,9 +233,7 @@ function startBackgroundMusic() {
         currentMusic.play().then(() => {
             startMusicRotation();
         }).catch(error => {
-            document.addEventListener('touchstart', () => {
-                currentMusic.play().then(() => startMusicRotation());
-            }, { once: true });
+            console.error("播放音乐失败:", error);
         });
     }
 }
@@ -232,9 +242,15 @@ function startMusicRotation() {
     if (!currentMusic) return;
     
     currentMusic.onended = async () => {
+        // 确保当前音乐停止
+        currentMusic.pause();
+        currentMusic.currentTime = 0;
+        
+        // 切换音乐
         [currentMusic, nextMusic] = [nextMusic, currentMusic];
         currentMusicIndex = (currentMusicIndex + 1) % musicList.length;
         nextMusic.src = musicList[(currentMusicIndex + 1) % musicList.length].url;
+        await nextMusic.load();
         
         try {
             await currentMusic.play();
