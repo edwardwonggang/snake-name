@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高级粒子效果</title>
+    <link rel="stylesheet" href="particles.css">
+    <style>
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .content h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(to right, #ff00cc, #3333ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .content h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="particles-canvas"></canvas>
+        <div class="content">
+            <h1>高级粒子世界</h1>
+            <p>探索不同的粒子效果和互动模式</p>
+        </div>
+        <div class="controls">
+            <button id="change-mode">模式: 连接</button>
+            <button id="change-color">切换颜色</button>
+        </div>
+    </div>
+    <script src="advanced-particles.js"></script>
+</body>
+</html>
